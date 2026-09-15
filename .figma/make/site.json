@@ -1,0 +1,10 @@
+{
+  "description": "Upload text prompts to generate tailored content quickly and efficiently, enhancing creativity and productivity for writers and marketers.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
