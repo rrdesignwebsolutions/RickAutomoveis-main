@@ -224,7 +224,7 @@ export default function Home() {
               <div className="grid grid-cols-3 gap-6 mb-8">
                 {[
                   { num: "+20", label: "Anos de mercado" },
-                  { num: "+1.200", label: "Carros vendidos" },
+                  { num: "+3.000", label: "Carros vendidos" },
                   { num: "4.9★", label: "Avaliação média" },
                 ].map((stat) => (
                   <div key={stat.label}>

@@ -19,7 +19,7 @@ export default function SobreNos() {
 
       <section className="py-20" style={{ background: "#080808" }}>
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <img src="/showroom.svg" alt="Showroom Rick Automóveis" className="w-full object-cover" style={{ height: "420px", borderRadius: "4px" }} />
+          <img src="/showroom.png" alt="Showroom Rick Automóveis" className="w-full object-cover" style={{ height: "420px", borderRadius: "4px" }} />
           <div>
             <h2 className="text-3xl sm:text-4xl font-black mb-6" style={{ fontFamily: "Montserrat, sans-serif" }}>
               Mais do que vender carros
