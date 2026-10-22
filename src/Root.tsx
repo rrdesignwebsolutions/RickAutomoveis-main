@@ -18,9 +18,24 @@ export default function Root() {
 
   useEffect(() => {
     if (noFooter) return;
-    syncSharedVehicleImages().catch((error: unknown) => {
-      console.error("Não foi possível atualizar a ordem compartilhada das fotos.", error);
-    });
+
+    const refreshSharedImages = () => {
+      syncSharedVehicleImages().catch((error: unknown) => {
+        console.error("Não foi possível atualizar a ordem compartilhada das fotos.", error);
+      });
+    };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refreshSharedImages();
+    };
+
+    refreshSharedImages();
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    window.addEventListener("pageshow", refreshSharedImages);
+
+    return () => {
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.removeEventListener("pageshow", refreshSharedImages);
+    };
   }, [noFooter]);
 
   useEffect(() => {

@@ -70,7 +70,7 @@ export function useVehicles(): Vehicle[] {
 }
 
 export async function syncSharedVehicleImages(): Promise<void> {
-  const response = await fetch("/api/vehicle-images");
+  const response = await fetch("/api/vehicle-images", { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`Falha ao carregar as fotos compartilhadas (${response.status}).`);
   }

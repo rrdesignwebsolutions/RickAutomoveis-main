@@ -74,7 +74,7 @@ export default function AdminVehicleForm() {
     let active = true;
     setLoadingSharedImages(true);
     setSharedImagesError(null);
-    fetch("/api/vehicle-images")
+    fetch("/api/vehicle-images", { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error(`Falha ao buscar as fotos compartilhadas (${response.status}).`);
         return response.json() as Promise<Record<string, string[]>>;
