@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "rickautomoveis",
+  "main": "functions/worker.ts",
+  "compatibility_date": "2026-10-22",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "rickautomoveis-db",
+      "database_id": "9b6a7953-6a05-4717-80a4-ad4c0937ef0c"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "VEHICLE_IMAGES",
+      "bucket_name": "rickautomoveis-images"
+    }
+  ]
+}

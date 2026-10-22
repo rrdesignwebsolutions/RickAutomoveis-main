@@ -1,23 +1,35 @@
-# Compartilhamento das fotos dos veículos
+# Compartilhar as fotos dos veículos na Cloudflare
 
-O catálogo inicial do site continua sendo carregado pelo aplicativo. A ordem definida no painel e as fotos enviadas são compartilhadas pela Cloudflare Pages Function, D1 e R2.
+O projeto está configurado para Cloudflare Workers com arquivos estáticos e uma API no mesmo Worker. Essa opção funciona no plano gratuito e mantém o site no Worker atual. O binding R2 guarda as fotos; o D1 guarda a ordem compartilhada.
 
-## Configuração
+## Configuração inicial
 
-1. No painel Cloudflare, abra o projeto Pages do site.
-2. Crie um banco D1 e aplique `migrations/0001_vehicle_images.sql`.
-3. Crie um bucket R2.
-4. Em **Settings → Functions → Bindings**, adicione:
-   - D1 database: variável `DB`, apontando para o banco criado.
-   - R2 bucket: variável `VEHICLE_IMAGES`, apontando para o bucket criado.
-5. Em **Settings → Variables and Secrets**, configure:
-   - `ADMIN_EMAIL`: e-mail usado no painel (padrão: `admin@rickautomoveis.com.br`).
-   - `ADMIN_PASSWORD`: uma senha nova e forte para o painel.
-   - `SESSION_SECRET`: um segredo aleatório longo, diferente da senha.
-6. Faça um novo deploy do projeto Pages. As Functions ficam na pasta `functions/`.
+1. No Cloudflare, abra o D1 `rickautomoveis-db` e copie o **Database ID**.
+2. No arquivo `wrangler.jsonc`, substitua `COLE_AQUI_O_ID_DO_BANCO_D1` pelo ID copiado. Confira também se o campo `name` é exatamente o nome do Worker que já atende o domínio do site; mantenha esse nome para não publicar outro Worker por engano.
+3. No terminal, autentique o Wrangler e aplique a migração no banco remoto:
 
-Para gerar um segredo localmente no PowerShell: `$bytes = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes); [BitConverter]::ToString($bytes).Replace("-", "").ToLowerInvariant()`.
+   ```powershell
+   pnpm exec wrangler login
+   pnpm exec wrangler d1 execute rickautomoveis-db --remote --file=migrations/0001_vehicle_images.sql
+   ```
 
-Depois do deploy, entre no painel normalmente, organize as fotos e salve o veículo. A primeira foto continuará sendo a capa. As fotos públicas são servidas pela própria Function e funcionam tanto no desktop quanto no celular.
+4. Crie os segredos do Worker. Use uma senha nova e forte para o painel:
 
-O login anterior era validado apenas no navegador. Com esta integração, o acesso e o salvamento de fotos são validados no servidor; configure a senha e o segredo acima antes de usar o painel publicado.
+   ```powershell
+   pnpm exec wrangler secret put ADMIN_PASSWORD
+   pnpm exec wrangler secret put SESSION_SECRET
+   ```
+
+   O Wrangler solicitará cada valor sem exibi-lo no terminal. O e-mail `admin@rickautomoveis.com.br` é o padrão; para trocá-lo, configure também `ADMIN_EMAIL` como secret.
+5. Publique a aplicação:
+
+   ```powershell
+   pnpm install
+   pnpm deploy:cloudflare
+   ```
+
+O `wrangler.jsonc` conecta o binding `DB` ao banco e `VEHICLE_IMAGES` ao bucket R2 `rickautomoveis-images`. Não é necessário adicionar variáveis pelo painel de um Worker que contém apenas recursos estáticos: o deploy com o ponto de entrada `functions/worker.ts` cria um Worker com código e bindings.
+
+Depois de configurar este Worker, publique atualizações com `pnpm deploy:cloudflare`. Não use o deploy estático do Figma Make para este projeto, pois ele pode substituir o Worker e remover o código da API. O uso permanece no plano gratuito enquanto estiver dentro das cotas gratuitas vigentes da Cloudflare.
+
+Depois da publicação, entre no painel, reorganize as fotos e salve o veículo. A primeira foto permanece como capa. A ordem e as imagens salvas são compartilhadas com todos os visitantes em desktop e celular.
