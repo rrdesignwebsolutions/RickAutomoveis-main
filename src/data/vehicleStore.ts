@@ -77,14 +77,17 @@ export function getVehicles(): Vehicle[] {
   return readStore();
 }
 
-export async function syncSharedVehicles(): Promise<void> {
+export async function syncSharedVehicles(): Promise<boolean> {
   const response = await fetch("/api/vehicles", { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`Falha ao carregar o estoque compartilhado (${response.status}).`);
   }
 
   const result = await response.json() as { vehicles?: Vehicle[] | null };
-  if (Array.isArray(result.vehicles)) replaceStore(result.vehicles);
+  if (!Array.isArray(result.vehicles)) return false;
+
+  replaceStore(result.vehicles);
+  return true;
 }
 
 export async function saveSharedVehicles(vehicles: Vehicle[], initializeOnly = false): Promise<Vehicle[]> {
