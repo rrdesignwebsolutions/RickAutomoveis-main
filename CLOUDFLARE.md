@@ -11,6 +11,7 @@ O projeto está configurado para Cloudflare Workers com arquivos estáticos e um
    ```powershell
    pnpm exec wrangler login
    pnpm exec wrangler d1 execute rickautomoveis-db --remote --file=migrations/0001_vehicle_images.sql
+   pnpm exec wrangler d1 execute rickautomoveis-db --remote --file=migrations/0002_vehicle_catalog.sql
    ```
 
 4. Crie os segredos do Worker. Use uma senha nova e forte para o painel:
@@ -32,4 +33,4 @@ O `wrangler.jsonc` conecta o binding `DB` ao banco e `VEHICLE_IMAGES` ao bucket 
 
 Depois de configurar este Worker, publique atualizações com `pnpm deploy:cloudflare`. Não use o deploy estático do Figma Make para este projeto, pois ele pode substituir o Worker e remover o código da API. O uso permanece no plano gratuito enquanto estiver dentro das cotas gratuitas vigentes da Cloudflare.
 
-Depois da publicação, entre no painel, reorganize as fotos e salve o veículo. A primeira foto permanece como capa. A ordem e as imagens salvas são compartilhadas com todos os visitantes em desktop e celular.
+Depois da publicação, entre no painel administrativo **no mesmo navegador em que o estoque foi editado anteriormente**. No primeiro acesso, o catálogo salvo nesse navegador será copiado para o D1 apenas se ainda não houver catálogo compartilhado. Depois disso, o estoque é carregado do D1 e as alterações administrativas ficam visíveis para todos os visitantes. A ordem e as imagens salvas continuam compartilhadas pelo R2/D1.

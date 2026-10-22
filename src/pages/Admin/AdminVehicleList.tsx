@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { type VehicleStatus, formatPrice, formatMileage } from "../../data/vehicles";
-import { saveVehicle, deleteVehicle as removeVehicle, useVehicles } from "../../data/vehicleStore";
+import { saveSharedVehicles, useVehicles } from "../../data/vehicleStore";
 
 const statusLabel: Record<VehicleStatus, string> = {
   available: "Disponível",
@@ -21,24 +21,34 @@ export default function AdminVehicleList() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; error: boolean } | null>(null);
 
-  const showToast = (msg: string) => {
-    setToast(msg);
+  const showToast = (message: string, error = false) => {
+    setToast({ message, error });
     setTimeout(() => setToast(null), 2500);
   };
 
-  const handleStatusChange = (id: string, status: VehicleStatus) => {
+  const handleStatusChange = async (id: string, status: VehicleStatus) => {
     const target = list.find((v) => v.id === id);
     if (!target) return;
-    saveVehicle({ ...target, status });
-    showToast("Status atualizado com sucesso!");
+    try {
+      await saveSharedVehicles(list.map((vehicle) => vehicle.id === id ? { ...vehicle, status } : vehicle));
+      showToast("Status atualizado com sucesso!");
+    } catch (error) {
+      console.error("Não foi possível atualizar o status compartilhado do veículo.", error);
+      showToast(error instanceof Error ? error.message : "Não foi possível atualizar o estoque compartilhado.", true);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    removeVehicle(id);
-    setDeleteId(null);
-    showToast("Veículo removido do estoque.");
+  const handleDelete = async (id: string) => {
+    try {
+      await saveSharedVehicles(list.filter((vehicle) => vehicle.id !== id));
+      setDeleteId(null);
+      showToast("Veículo removido do estoque.");
+    } catch (error) {
+      console.error("Não foi possível remover o veículo do estoque compartilhado.", error);
+      showToast(error instanceof Error ? error.message : "Não foi possível atualizar o estoque compartilhado.", true);
+    }
   };
 
   const filtered = list.filter((v) => {
@@ -52,8 +62,8 @@ export default function AdminVehicleList() {
     <div className="p-8">
       {/* Toast */}
       {toast && (
-        <div className="fixed top-6 right-6 z-50 px-5 py-3 text-sm font-semibold" style={{ background: "#1a2a1a", color: "#25D366", border: "1px solid #25D36644", borderRadius: "4px", fontFamily: "Montserrat, sans-serif" }}>
-          ✓ {toast}
+        <div className="fixed top-6 right-6 z-50 px-5 py-3 text-sm font-semibold" style={{ background: toast.error ? "#2a1111" : "#1a2a1a", color: toast.error ? "#fca5a5" : "#25D366", border: `1px solid ${toast.error ? "#fca5a544" : "#25D36644"}`, borderRadius: "4px", fontFamily: "Montserrat, sans-serif" }}>
+          {toast.error ? "! " : "✓ "}{toast.message}
         </div>
       )}
 

@@ -1,25 +1,34 @@
 import { useEffect, useState } from "react";
 import { Outlet, Link, useNavigate, useLocation } from "react-router";
 import Logo from "../../components/Logo";
+import { getVehicles, saveSharedVehicles, syncSharedVehicles } from "../../data/vehicleStore";
 
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [checkingSession, setCheckingSession] = useState(true);
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    fetch("/api/admin/session")
-      .then((response) => {
-        if (!response.ok) navigate("/admin");
-      })
-      .catch((error: unknown) => {
-        console.error("Não foi possível validar a sessão administrativa.", error);
-        navigate("/admin");
-      })
-      .finally(() => {
+    const validateSessionAndSyncCatalog = async () => {
+      try {
+        const response = await fetch("/api/admin/session");
+        if (!response.ok) {
+          navigate("/admin");
+          return;
+        }
+
+        await syncSharedVehicles();
+        await saveSharedVehicles(getVehicles(), true);
+      } catch (error) {
+        console.error("Não foi possível validar a sessão ou sincronizar o estoque.", error);
+        if (active) setSessionError(error instanceof Error ? error.message : "Não foi possível sincronizar o estoque compartilhado.");
+      } finally {
         if (active) setCheckingSession(false);
-      });
+      }
+    };
+    void validateSessionAndSyncCatalog();
     return () => { active = false; };
   }, [navigate]);
 
@@ -85,7 +94,11 @@ export default function AdminLayout() {
 
       {/* Main */}
       <main className="flex-1 overflow-auto">
-        {checkingSession ? null : <Outlet />}
+        {checkingSession ? null : sessionError ? (
+          <div className="p-8 text-sm" style={{ color: "#fca5a5" }}>
+            Não foi possível carregar o estoque compartilhado: {sessionError}
+          </div>
+        ) : <Outlet />}
       </main>
     </div>
   );

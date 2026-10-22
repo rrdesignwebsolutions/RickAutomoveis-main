@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 const STORAGE_KEY = "rick-automoveis:vehicles";
 const STORAGE_VERSION_KEY = "rick-automoveis:catalog-version";
 const DELETED_IDS_KEY = "rick-automoveis:deleted-vehicle-ids";
+const SHARED_CATALOG_KEY = "rick-automoveis:shared-catalog";
 const CATALOG_VERSION = "2026-09-14-verified-catalog-v11";
 
 function readDeletedIds(): Set<string> {
@@ -20,6 +21,17 @@ function readDeletedIds(): Set<string> {
 
 function readStore(): Vehicle[] {
   if (typeof window === "undefined") return seedVehicles;
+  if (window.localStorage.getItem(SHARED_CATALOG_KEY) === "true") {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const stored: unknown = JSON.parse(raw);
+        if (Array.isArray(stored)) return stored as Vehicle[];
+      }
+    } catch {
+      // corrupted shared cache, fall back to reseeding below
+    }
+  }
   if (window.localStorage.getItem(STORAGE_VERSION_KEY) !== CATALOG_VERSION) {
     window.localStorage.removeItem(DELETED_IDS_KEY);
     writeStore(seedVehicles);
@@ -53,8 +65,41 @@ function writeStore(list: Vehicle[]) {
   window.dispatchEvent(new Event("rick-vehicles-updated"));
 }
 
+function replaceStore(list: Vehicle[]) {
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(SHARED_CATALOG_KEY, "true");
+    window.localStorage.removeItem(DELETED_IDS_KEY);
+  }
+  writeStore(list);
+}
+
 export function getVehicles(): Vehicle[] {
   return readStore();
+}
+
+export async function syncSharedVehicles(): Promise<void> {
+  const response = await fetch("/api/vehicles", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Falha ao carregar o estoque compartilhado (${response.status}).`);
+  }
+
+  const result = await response.json() as { vehicles?: Vehicle[] | null };
+  if (Array.isArray(result.vehicles)) replaceStore(result.vehicles);
+}
+
+export async function saveSharedVehicles(vehicles: Vehicle[], initializeOnly = false): Promise<Vehicle[]> {
+  const response = await fetch("/api/admin/vehicles", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ vehicles, initializeOnly }),
+  });
+  const result = await response.json() as { vehicles?: Vehicle[]; error?: string };
+  if (!response.ok || !Array.isArray(result.vehicles)) {
+    throw new Error(result.error || "Não foi possível salvar o estoque compartilhado.");
+  }
+
+  replaceStore(result.vehicles);
+  return result.vehicles;
 }
 
 export function useVehicles(): Vehicle[] {
@@ -143,29 +188,4 @@ export function nextVehicleId(): string {
   const list = readStore();
   const max = list.reduce((acc, v) => Math.max(acc, Number(v.id) || 0), 0);
   return String(max + 1);
-}
-
-export function saveVehicle(vehicle: Vehicle): Vehicle[] {
-  const list = readStore();
-  const idx = list.findIndex((v) => v.id === vehicle.id);
-  const next = idx >= 0 ? list.map((v) => (v.id === vehicle.id ? vehicle : v)) : [...list, vehicle];
-  if (typeof window !== "undefined") {
-    const deletedIds = readDeletedIds();
-    if (deletedIds.delete(vehicle.id)) {
-      window.localStorage.setItem(DELETED_IDS_KEY, JSON.stringify([...deletedIds]));
-    }
-  }
-  writeStore(next);
-  return next;
-}
-
-export function deleteVehicle(id: string): Vehicle[] {
-  const next = readStore().filter((v) => v.id !== id);
-  if (typeof window !== "undefined") {
-    const deletedIds = readDeletedIds();
-    deletedIds.add(id);
-    window.localStorage.setItem(DELETED_IDS_KEY, JSON.stringify([...deletedIds]));
-  }
-  writeStore(next);
-  return next;
 }

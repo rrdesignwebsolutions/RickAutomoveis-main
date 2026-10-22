@@ -3,8 +3,10 @@ import { onRequestPost as login } from "./api/admin/login";
 import { onRequestPost as logout } from "./api/admin/logout";
 import { onRequestGet as session } from "./api/admin/session";
 import { onRequestPost as saveVehicleImages } from "./api/admin/vehicle-images";
+import { onRequestPost as saveVehicles } from "./api/admin/vehicles";
 import { onRequestGet as getImage } from "./api/image";
 import { onRequestGet as getVehicleImages } from "./api/vehicle-images";
+import { onRequestGet as getVehicles } from "./api/vehicles";
 
 interface WorkerEnv extends Env {
   ASSETS: { fetch(request: Request): Promise<Response> };
@@ -14,11 +16,13 @@ type ApiHandler = (context: PagesContext) => Promise<Response>;
 
 const apiRoutes: Record<string, { method: string; handler: ApiHandler }> = {
   "/api/vehicle-images": { method: "GET", handler: getVehicleImages },
+  "/api/vehicles": { method: "GET", handler: getVehicles },
   "/api/image": { method: "GET", handler: getImage },
   "/api/admin/login": { method: "POST", handler: login },
   "/api/admin/session": { method: "GET", handler: session },
   "/api/admin/logout": { method: "POST", handler: logout },
   "/api/admin/vehicle-images": { method: "POST", handler: saveVehicleImages },
+  "/api/admin/vehicles": { method: "POST", handler: saveVehicles },
 };
 
 export default {

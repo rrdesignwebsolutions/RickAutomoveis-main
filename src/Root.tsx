@@ -3,7 +3,7 @@ import { Outlet, useLocation } from "react-router";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import { whatsappLink } from "./data/contact";
-import { syncSharedVehicleImages } from "./data/vehicleStore";
+import { syncSharedVehicleImages, syncSharedVehicles } from "./data/vehicleStore";
 
 const WHATSAPP_MESSAGE = "Olá, Rick! Estava olhando os carros do site e gostaria de ajuda para encontrar a melhor opção para mim. 🚗";
 
@@ -19,22 +19,29 @@ export default function Root() {
   useEffect(() => {
     if (noFooter) return;
 
-    const refreshSharedImages = () => {
-      syncSharedVehicleImages().catch((error: unknown) => {
+    const refreshSharedData = async () => {
+      try {
+        await syncSharedVehicles();
+      } catch (error) {
+        console.error("Não foi possível atualizar o estoque compartilhado.", error);
+      }
+      try {
+        await syncSharedVehicleImages();
+      } catch (error) {
         console.error("Não foi possível atualizar a ordem compartilhada das fotos.", error);
-      });
+      }
     };
     const refreshWhenVisible = () => {
-      if (document.visibilityState === "visible") refreshSharedImages();
+      if (document.visibilityState === "visible") refreshSharedData();
     };
 
-    refreshSharedImages();
+    refreshSharedData();
     document.addEventListener("visibilitychange", refreshWhenVisible);
-    window.addEventListener("pageshow", refreshSharedImages);
+    window.addEventListener("pageshow", refreshSharedData);
 
     return () => {
       document.removeEventListener("visibilitychange", refreshWhenVisible);
-      window.removeEventListener("pageshow", refreshSharedImages);
+      window.removeEventListener("pageshow", refreshSharedData);
     };
   }, [noFooter]);
 

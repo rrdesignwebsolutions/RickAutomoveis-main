@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import type { Vehicle, VehicleStatus } from "../../data/vehicles";
-import { buildSlug, getVehicleById, nextVehicleId, saveVehicle } from "../../data/vehicleStore";
+import { buildSlug, getVehicleById, getVehicles, nextVehicleId, saveSharedVehicles } from "../../data/vehicleStore";
 
 const MAX_IMAGE_SIZE_MB = 5;
 
@@ -26,6 +26,53 @@ const FEATURE_OPTIONS = [
   "Faróis LED", "Rodas de liga leve", "Carregador wireless",
   "Direção elétrica", "Frenagem automática de emergência",
 ];
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold mb-2 tracking-wider" style={{ color: "#838383", fontFamily: "Montserrat, sans-serif" }}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function Input({ value, onChange, placeholder, type = "text" }: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  type?: string;
+}) {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full px-3 py-2.5 text-sm outline-none"
+      style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", color: "#fff", borderRadius: "4px" }}
+      onFocus={(e) => { e.target.style.borderColor = "#ccdd8f"; }}
+      onBlur={(e) => { e.target.style.borderColor = "#2a2a2a"; }}
+    />
+  );
+}
+
+function Select({ value, onChange, options, labels }: {
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+  labels?: Record<string, string>;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full px-3 py-2.5 text-sm outline-none cursor-pointer appearance-none"
+      style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", color: "#fff", borderRadius: "4px" }}
+    >
+      {options.map((o) => <option key={o} value={o}>{labels?.[o] || o}</option>)}
+    </select>
+  );
+}
 
 export default function AdminVehicleForm() {
   const { id } = useParams<{ id: string }>();
@@ -191,7 +238,13 @@ export default function AdminVehicleForm() {
         throw new Error(result.error || "Não foi possível salvar as fotos compartilhadas.");
       }
 
-      saveVehicle({ ...vehicle, images: result.images });
+      const savedVehicle = { ...vehicle, images: result.images };
+      const vehicles = getVehicles();
+      const index = vehicles.findIndex((item) => item.id === savedVehicle.id);
+      const updatedVehicles = index >= 0
+        ? vehicles.map((item) => item.id === savedVehicle.id ? savedVehicle : item)
+        : [...vehicles, savedVehicle];
+      await saveSharedVehicles(updatedVehicles);
       setSaved(true);
       setTimeout(() => navigate("/admin/veiculos"), 1200);
     } catch (error) {
@@ -200,37 +253,6 @@ export default function AdminVehicleForm() {
       setSaving(false);
     }
   };
-
-  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div>
-      <label className="block text-xs font-semibold mb-2 tracking-wider" style={{ color: "#838383", fontFamily: "Montserrat, sans-serif" }}>{label}</label>
-      {children}
-    </div>
-  );
-
-  const Input = ({ name, placeholder, type = "text" }: { name: string; placeholder?: string; type?: string }) => (
-    <input
-      type={type}
-      value={(form as unknown as Record<string, string>)[name]}
-      onChange={(e) => set(name, e.target.value)}
-      placeholder={placeholder}
-      className="w-full px-3 py-2.5 text-sm outline-none"
-      style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", color: "#fff", borderRadius: "4px" }}
-      onFocus={(e) => { e.target.style.borderColor = "#ccdd8f"; }}
-      onBlur={(e) => { e.target.style.borderColor = "#2a2a2a"; }}
-    />
-  );
-
-  const Select = ({ name, options, labels }: { name: string; options: string[]; labels?: Record<string, string> }) => (
-    <select
-      value={(form as unknown as Record<string, string>)[name]}
-      onChange={(e) => set(name, e.target.value)}
-      className="w-full px-3 py-2.5 text-sm outline-none cursor-pointer appearance-none"
-      style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", color: "#fff", borderRadius: "4px" }}
-    >
-      {options.map((o) => <option key={o} value={o}>{labels?.[o] || o}</option>)}
-    </select>
-  );
 
   return (
     <div className="p-8 max-w-4xl">
@@ -254,16 +276,16 @@ export default function AdminVehicleForm() {
         <section className="p-6" style={{ background: "#111", border: "1px solid #1e1e1e", borderRadius: "4px" }}>
           <h2 className="text-sm font-bold tracking-widest mb-5" style={{ color: "#ccdd8f", fontFamily: "Montserrat, sans-serif" }}>INFORMAÇÕES BÁSICAS</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Field label="MARCA"><Input name="brand" placeholder="Toyota" /></Field>
-            <Field label="MODELO"><Input name="model" placeholder="Corolla" /></Field>
-            <Field label="VERSÃO"><Input name="version" placeholder="XEi 2.0" /></Field>
-            <Field label="ANO"><Input name="year" type="number" placeholder="2023" /></Field>
-            <Field label="ANO/MODELO"><Input name="modelYear" type="number" placeholder="2023" /></Field>
-            <Field label="QUILOMETRAGEM"><Input name="mileage" type="number" placeholder="0" /></Field>
-            <Field label="PREÇO (R$)"><Input name="price" type="number" placeholder="100000" /></Field>
-            <Field label="PREÇO PROMOCIONAL (R$)"><Input name="promotionalPrice" type="number" placeholder="Opcional" /></Field>
-            <Field label="COR"><Input name="color" placeholder="Branco Pérola" /></Field>
-            <Field label="FINAL DA PLACA"><Input name="plateFinal" placeholder="7" /></Field>
+            <Field label="MARCA"><Input value={form.brand} onChange={(value) => set("brand", value)} placeholder="Toyota" /></Field>
+            <Field label="MODELO"><Input value={form.model} onChange={(value) => set("model", value)} placeholder="Corolla" /></Field>
+            <Field label="VERSÃO"><Input value={form.version} onChange={(value) => set("version", value)} placeholder="XEi 2.0" /></Field>
+            <Field label="ANO"><Input value={form.year} onChange={(value) => set("year", value)} type="number" placeholder="2023" /></Field>
+            <Field label="ANO/MODELO"><Input value={form.modelYear} onChange={(value) => set("modelYear", value)} type="number" placeholder="2023" /></Field>
+            <Field label="QUILOMETRAGEM"><Input value={form.mileage} onChange={(value) => set("mileage", value)} type="number" placeholder="0" /></Field>
+            <Field label="PREÇO (R$)"><Input value={form.price} onChange={(value) => set("price", value)} type="number" placeholder="100000" /></Field>
+            <Field label="PREÇO PROMOCIONAL (R$)"><Input value={form.promotionalPrice} onChange={(value) => set("promotionalPrice", value)} type="number" placeholder="Opcional" /></Field>
+            <Field label="COR"><Input value={form.color} onChange={(value) => set("color", value)} placeholder="Branco Pérola" /></Field>
+            <Field label="FINAL DA PLACA"><Input value={form.plateFinal} onChange={(value) => set("plateFinal", value)} placeholder="7" /></Field>
           </div>
         </section>
 
@@ -271,10 +293,10 @@ export default function AdminVehicleForm() {
         <section className="p-6" style={{ background: "#111", border: "1px solid #1e1e1e", borderRadius: "4px" }}>
           <h2 className="text-sm font-bold tracking-widest mb-5" style={{ color: "#ccdd8f", fontFamily: "Montserrat, sans-serif" }}>MECÂNICA</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="MOTOR"><Input name="engine" placeholder="2.0 Flex 177cv" /></Field>
-            <Field label="TRAÇÃO"><Input name="traction" placeholder="FWD" /></Field>
-            <Field label="CÂMBIO"><Select name="transmission" options={TRANS_OPTIONS} /></Field>
-            <Field label="COMBUSTÍVEL"><Select name="fuel" options={FUEL_OPTIONS} /></Field>
+            <Field label="MOTOR"><Input value={form.engine} onChange={(value) => set("engine", value)} placeholder="2.0 Flex 177cv" /></Field>
+            <Field label="TRAÇÃO"><Input value={form.traction} onChange={(value) => set("traction", value)} placeholder="FWD" /></Field>
+            <Field label="CÂMBIO"><Select value={form.transmission} onChange={(value) => set("transmission", value)} options={TRANS_OPTIONS} /></Field>
+            <Field label="COMBUSTÍVEL"><Select value={form.fuel} onChange={(value) => set("fuel", value)} options={FUEL_OPTIONS} /></Field>
           </div>
         </section>
 
@@ -282,9 +304,9 @@ export default function AdminVehicleForm() {
         <section className="p-6" style={{ background: "#111", border: "1px solid #1e1e1e", borderRadius: "4px" }}>
           <h2 className="text-sm font-bold tracking-widest mb-5" style={{ color: "#ccdd8f", fontFamily: "Montserrat, sans-serif" }}>CARACTERÍSTICAS</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Field label="CARROCERIA"><Select name="bodyType" options={BODY_OPTIONS} /></Field>
-            <Field label="PORTAS"><Select name="doors" options={["2", "3", "4", "5"]} /></Field>
-            <Field label="LUGARES"><Select name="seats" options={["2", "4", "5", "6", "7"]} /></Field>
+            <Field label="CARROCERIA"><Select value={form.bodyType} onChange={(value) => set("bodyType", value)} options={BODY_OPTIONS} /></Field>
+            <Field label="PORTAS"><Select value={form.doors} onChange={(value) => set("doors", value)} options={["2", "3", "4", "5"]} /></Field>
+            <Field label="LUGARES"><Select value={form.seats} onChange={(value) => set("seats", value)} options={["2", "4", "5", "6", "7"]} /></Field>
           </div>
         </section>
 
@@ -435,7 +457,8 @@ export default function AdminVehicleForm() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Field label="STATUS">
               <Select
-                name="status"
+                value={form.status}
+                onChange={(value) => set("status", value)}
                 options={["available", "reserved", "sold", "inactive"]}
                 labels={{ available: "Disponível", reserved: "Reservado", sold: "Vendido", inactive: "Inativo" }}
               />

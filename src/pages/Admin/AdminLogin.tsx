@@ -19,8 +19,21 @@ export default function AdminLogin() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const result = await response.json() as { error?: string };
-      if (!response.ok) throw new Error(result.error || "Não foi possível entrar no painel.");
+      const responseBody = await response.text();
+      let result: { error?: string; authenticated?: boolean } = {};
+      if (responseBody) {
+        try {
+          result = JSON.parse(responseBody) as { error?: string; authenticated?: boolean };
+        } catch {
+          throw new Error(`O servidor retornou uma resposta inválida (HTTP ${response.status}). Tente novamente.`);
+        }
+      }
+      if (!response.ok) {
+        throw new Error(result.error || `Não foi possível entrar no painel (HTTP ${response.status}).`);
+      }
+      if (result.authenticated !== true) {
+        throw new Error("O servidor não confirmou o acesso ao painel. Tente novamente.");
+      }
       navigate("/admin/dashboard");
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : "Não foi possível entrar no painel.");
