@@ -1,20 +1,36 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, Link, useNavigate, useLocation } from "react-router";
 import Logo from "../../components/Logo";
 
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
-    if (!localStorage.getItem("rick_admin")) {
-      navigate("/admin");
-    }
+    let active = true;
+    fetch("/api/admin/session")
+      .then((response) => {
+        if (!response.ok) navigate("/admin");
+      })
+      .catch((error: unknown) => {
+        console.error("Não foi possível validar a sessão administrativa.", error);
+        navigate("/admin");
+      })
+      .finally(() => {
+        if (active) setCheckingSession(false);
+      });
+    return () => { active = false; };
   }, [navigate]);
 
-  const logout = () => {
-    localStorage.removeItem("rick_admin");
-    navigate("/admin");
+  const logout = async () => {
+    try {
+      await fetch("/api/admin/logout", { method: "POST" });
+    } catch (error) {
+      console.error("Não foi possível encerrar a sessão administrativa.", error);
+    } finally {
+      navigate("/admin");
+    }
   };
 
   const navItems = [
@@ -69,7 +85,7 @@ export default function AdminLayout() {
 
       {/* Main */}
       <main className="flex-1 overflow-auto">
-        <Outlet />
+        {checkingSession ? null : <Outlet />}
       </main>
     </div>
   );

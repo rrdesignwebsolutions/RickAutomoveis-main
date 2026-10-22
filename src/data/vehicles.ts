@@ -20,7 +20,7 @@ const common = ["Ar-condicionado", "Vidros elétricos", "Travas elétricas", "Re
 const motorcycleCommon = ["Revisado", "Documentação em dia"];
 type Seed = Omit<Vehicle, "images" | "createdAt"> & { folder: string };
 const make = (seed: Seed): Vehicle => { const { folder, ...vehicle } = seed; return { ...vehicle, images: imagesFor(folder), createdAt: "2026-09-14" }; };
-const v = (s: Omit<Seed, "features" | "images" | "createdAt"> & { features?: string[] }) => make({ ...s, features: [...(s.bodyType === "Moto" ? motorcycleCommon : common), ...(s.features || [])], images: [] });
+const v = (s: Omit<Seed, "features" | "images" | "createdAt"> & { features?: string[] }) => make({ ...s, features: [...(s.bodyType === "Moto" ? motorcycleCommon : common), ...(s.features || [])] });
 
 export const vehicles: Vehicle[] = [
   v({ id: "sandero-stepway-2014", brand: "Renault", model: "Sandero Stepway", version: "1.6", year: 2014, modelYear: 2014, mileage: 188000, price: 44000, color: "Não informada", fuel: "Flex", transmission: "Manual", engine: "1.6 Flex", traction: "FWD", bodyType: "Hatch", doors: 4, seats: 5, plateFinal: "-", description: "Renault Sandero Stepway 1.6 2014 completo, com suspensão elevada, barras de teto, central Media NAV com GPS e excelente espaço interno. Muito bem conservado, revisado e pronto para rodar.", status: "available", featured: true, isNew: false, slug: "renault-sandero-stepway-1-6-2014", folder: "Sandero Step. 1.6 2014", features: ["Central multimídia Media NAV", "GPS", "Freios ABS", "Airbags frontais", "Faróis de neblina", "Rodas de liga leve"] }),

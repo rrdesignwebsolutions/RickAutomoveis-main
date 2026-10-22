@@ -1,12 +1,27 @@
 import { vehicles as seedVehicles, type Vehicle } from "./vehicles";
+import { useEffect, useState } from "react";
 
 const STORAGE_KEY = "rick-automoveis:vehicles";
 const STORAGE_VERSION_KEY = "rick-automoveis:catalog-version";
+const DELETED_IDS_KEY = "rick-automoveis:deleted-vehicle-ids";
 const CATALOG_VERSION = "2026-09-14-verified-catalog-v11";
+
+function readDeletedIds(): Set<string> {
+  const raw = window.localStorage.getItem(DELETED_IDS_KEY);
+  if (!raw) return new Set();
+
+  try {
+    const ids: unknown = JSON.parse(raw);
+    return new Set(Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string") : []);
+  } catch {
+    return new Set();
+  }
+}
 
 function readStore(): Vehicle[] {
   if (typeof window === "undefined") return seedVehicles;
   if (window.localStorage.getItem(STORAGE_VERSION_KEY) !== CATALOG_VERSION) {
+    window.localStorage.removeItem(DELETED_IDS_KEY);
     writeStore(seedVehicles);
     window.localStorage.setItem(STORAGE_VERSION_KEY, CATALOG_VERSION);
     return seedVehicles;
@@ -16,8 +31,10 @@ function readStore(): Vehicle[] {
     if (raw) {
       const stored = JSON.parse(raw) as Vehicle[];
       const seedIds = new Set(seedVehicles.map((seed) => seed.id));
-      const catalogVehicles = stored.filter((vehicle) => seedIds.has(vehicle.id));
-      const missingFromSeed = seedVehicles.filter((seed) => !catalogVehicles.some((v) => v.id === seed.id));
+      const deletedIds = readDeletedIds();
+      const catalogVehicles = stored.filter((vehicle) => !seedIds.has(vehicle.id) || !deletedIds.has(vehicle.id));
+      const storedIds = new Set(catalogVehicles.map((vehicle) => vehicle.id));
+      const missingFromSeed = seedVehicles.filter((seed) => !deletedIds.has(seed.id) && !storedIds.has(seed.id));
       const merged = missingFromSeed.length > 0 ? [...catalogVehicles, ...missingFromSeed] : catalogVehicles;
       if (merged.length !== stored.length || missingFromSeed.length > 0) writeStore(merged);
       return merged;
@@ -33,10 +50,43 @@ function readStore(): Vehicle[] {
 function writeStore(list: Vehicle[]) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  window.dispatchEvent(new Event("rick-vehicles-updated"));
 }
 
 export function getVehicles(): Vehicle[] {
   return readStore();
+}
+
+export function useVehicles(): Vehicle[] {
+  const [vehicles, setVehicles] = useState(getVehicles);
+
+  useEffect(() => {
+    const update = () => setVehicles(getVehicles());
+    window.addEventListener("rick-vehicles-updated", update);
+    return () => window.removeEventListener("rick-vehicles-updated", update);
+  }, []);
+
+  return vehicles;
+}
+
+export async function syncSharedVehicleImages(): Promise<void> {
+  const response = await fetch("/api/vehicle-images");
+  if (!response.ok) {
+    throw new Error(`Falha ao carregar as fotos compartilhadas (${response.status}).`);
+  }
+
+  const imagesByVehicleId = await response.json() as Record<string, string[]>;
+  const current = readStore();
+  let changed = false;
+  const updated = current.map((vehicle) => {
+    const images = imagesByVehicleId[vehicle.id];
+    if (!Array.isArray(images) || images.length === 0) return vehicle;
+    if (images.length === vehicle.images.length && images.every((image, index) => image === vehicle.images[index])) return vehicle;
+    changed = true;
+    return { ...vehicle, images };
+  });
+
+  if (changed) writeStore(updated);
 }
 
 export function getVehicleById(id: string): Vehicle | undefined {
@@ -99,12 +149,23 @@ export function saveVehicle(vehicle: Vehicle): Vehicle[] {
   const list = readStore();
   const idx = list.findIndex((v) => v.id === vehicle.id);
   const next = idx >= 0 ? list.map((v) => (v.id === vehicle.id ? vehicle : v)) : [...list, vehicle];
+  if (typeof window !== "undefined") {
+    const deletedIds = readDeletedIds();
+    if (deletedIds.delete(vehicle.id)) {
+      window.localStorage.setItem(DELETED_IDS_KEY, JSON.stringify([...deletedIds]));
+    }
+  }
   writeStore(next);
   return next;
 }
 
 export function deleteVehicle(id: string): Vehicle[] {
   const next = readStore().filter((v) => v.id !== id);
+  if (typeof window !== "undefined") {
+    const deletedIds = readDeletedIds();
+    deletedIds.add(id);
+    window.localStorage.setItem(DELETED_IDS_KEY, JSON.stringify([...deletedIds]));
+  }
   writeStore(next);
   return next;
 }

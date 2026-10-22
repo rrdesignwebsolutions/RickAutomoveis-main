@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import type { Vehicle, VehicleStatus } from "../../data/vehicles";
 import { buildSlug, getVehicleById, nextVehicleId, saveVehicle } from "../../data/vehicleStore";
@@ -61,7 +61,37 @@ export default function AdminVehicleForm() {
   const [images, setImages] = useState<string[]>(existing?.images || []);
   const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [sharedImagesError, setSharedImagesError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loadingSharedImages, setLoadingSharedImages] = useState(!!existing);
+
+  useEffect(() => {
+    if (!id || id === "novo") {
+      setLoadingSharedImages(false);
+      return;
+    }
+    let active = true;
+    setLoadingSharedImages(true);
+    setSharedImagesError(null);
+    fetch("/api/vehicle-images")
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Falha ao buscar as fotos compartilhadas (${response.status}).`);
+        return response.json() as Promise<Record<string, string[]>>;
+      })
+      .then((imagesByVehicleId) => {
+        const sharedImages = imagesByVehicleId[id];
+        if (active && Array.isArray(sharedImages) && sharedImages.length > 0) setImages(sharedImages);
+      })
+      .catch((error: unknown) => {
+        console.error("Não foi possível carregar a ordem compartilhada das fotos.", error);
+        if (active) setSharedImagesError(error instanceof Error ? error.message : "Não foi possível carregar as fotos compartilhadas.");
+      })
+      .finally(() => {
+        if (active) setLoadingSharedImages(false);
+      });
+    return () => { active = false; };
+  }, [id]);
 
   const set = (key: string, value: string | boolean) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -73,7 +103,7 @@ export default function AdminVehicleForm() {
     if (!fileList || fileList.length === 0) return;
     setImageError(null);
     const files = Array.from(fileList);
-    const invalid = files.find((f) => !f.type.startsWith("image/") || f.size > MAX_IMAGE_SIZE_MB * 1024 * 1024);
+    const invalid = files.find((f) => !["image/jpeg", "image/png", "image/webp"].includes(f.type) || f.size > MAX_IMAGE_SIZE_MB * 1024 * 1024);
     if (invalid) {
       setImageError(`Envie apenas imagens de até ${MAX_IMAGE_SIZE_MB}MB.`);
       return;
@@ -112,12 +142,14 @@ export default function AdminVehicleForm() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (images.length === 0) {
       setImageError("Adicione pelo menos uma foto do veículo.");
       return;
     }
+    setSaving(true);
+    setImageError(null);
 
     const vehicle: Vehicle = {
       id: existing?.id || nextVehicleId(),
@@ -148,11 +180,25 @@ export default function AdminVehicleForm() {
       createdAt: existing?.createdAt || new Date().toISOString().slice(0, 10),
     };
 
-    saveVehicle(vehicle);
-    setSaved(true);
-    setTimeout(() => {
-      navigate("/admin/veiculos");
-    }, 1200);
+    try {
+      const response = await fetch("/api/admin/vehicle-images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vehicleId: vehicle.id, images }),
+      });
+      const result = await response.json() as { images?: string[]; error?: string };
+      if (!response.ok || !Array.isArray(result.images)) {
+        throw new Error(result.error || "Não foi possível salvar as fotos compartilhadas.");
+      }
+
+      saveVehicle({ ...vehicle, images: result.images });
+      setSaved(true);
+      setTimeout(() => navigate("/admin/veiculos"), 1200);
+    } catch (error) {
+      setImageError(error instanceof Error ? error.message : "Não foi possível salvar as fotos compartilhadas.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -270,6 +316,9 @@ export default function AdminVehicleForm() {
 
           {imageError && (
             <p className="text-xs font-semibold mb-4" style={{ color: "#e30613" }}>{imageError}</p>
+          )}
+          {sharedImagesError && (
+            <p className="text-xs font-semibold mb-4" style={{ color: "#e30613" }}>{sharedImagesError}</p>
           )}
 
           {images.length > 0 && (
@@ -415,10 +464,11 @@ export default function AdminVehicleForm() {
         <div className="flex gap-4">
           <button
             type="submit"
+            disabled={saving || loadingSharedImages || !!sharedImagesError}
             className="px-8 py-3.5 text-sm font-black tracking-wider transition-opacity hover:opacity-90"
             style={{ background: "#ccdd8f", color: "#000", borderRadius: "4px", fontFamily: "Montserrat, sans-serif" }}
           >
-            {isEditing ? "SALVAR ALTERAÇÕES" : "PUBLICAR VEÍCULO"}
+            {loadingSharedImages ? "CARREGANDO FOTOS..." : saving ? "SALVANDO..." : isEditing ? "SALVAR ALTERAÇÕES" : "PUBLICAR VEÍCULO"}
           </button>
           <button
             type="button"

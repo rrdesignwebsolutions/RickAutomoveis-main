@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS vehicle_images (
+  vehicle_id TEXT PRIMARY KEY,
+  images_json TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

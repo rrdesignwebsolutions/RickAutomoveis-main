@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router";
 import VehicleCard from "../components/VehicleCard";
 import type { BodyType, FuelType, TransmissionType } from "../data/vehicles";
-import { getAvailableVehicles } from "../data/vehicleStore";
+import { useVehicles } from "../data/vehicleStore";
 
 const SORT_OPTIONS = [
   { value: "recent", label: "Mais recentes" },
@@ -17,7 +17,11 @@ const SORT_OPTIONS = [
 export default function Estoque() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const allVehicles = useMemo(() => getAvailableVehicles(), []);
+  const vehicles = useVehicles();
+  const allVehicles = useMemo(
+    () => vehicles.filter((vehicle) => vehicle.status === "available" || vehicle.status === "reserved"),
+    [vehicles],
+  );
 
   const [search, setSearch] = useState(searchParams.get("q") || "");
   const [sort, setSort] = useState("recent");

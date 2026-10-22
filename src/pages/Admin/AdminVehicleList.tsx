@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { type Vehicle, type VehicleStatus, formatPrice, formatMileage } from "../../data/vehicles";
-import { getVehicles, saveVehicle, deleteVehicle as removeVehicle } from "../../data/vehicleStore";
+import { type VehicleStatus, formatPrice, formatMileage } from "../../data/vehicles";
+import { saveVehicle, deleteVehicle as removeVehicle, useVehicles } from "../../data/vehicleStore";
 
 const statusLabel: Record<VehicleStatus, string> = {
   available: "Disponível",
@@ -17,7 +17,7 @@ const statusColor: Record<VehicleStatus, string> = {
 };
 
 export default function AdminVehicleList() {
-  const [list, setList] = useState<Vehicle[]>(() => getVehicles());
+  const list = useVehicles();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -31,12 +31,12 @@ export default function AdminVehicleList() {
   const handleStatusChange = (id: string, status: VehicleStatus) => {
     const target = list.find((v) => v.id === id);
     if (!target) return;
-    setList(saveVehicle({ ...target, status }));
+    saveVehicle({ ...target, status });
     showToast("Status atualizado com sucesso!");
   };
 
   const handleDelete = (id: string) => {
-    setList(removeVehicle(id));
+    removeVehicle(id);
     setDeleteId(null);
     showToast("Veículo removido do estoque.");
   };

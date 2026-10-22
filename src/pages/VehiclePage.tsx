@@ -2,12 +2,13 @@ import { useState } from "react";
 import { useParams, Link } from "react-router";
 import VehicleCard from "../components/VehicleCard";
 import { formatPrice, formatMileage } from "../data/vehicles";
-import { getVehicleBySlug, getRelatedVehicles } from "../data/vehicleStore";
+import { useVehicles } from "../data/vehicleStore";
 import { whatsappLink } from "../data/contact";
 
 export default function VehiclePage() {
   const { slug } = useParams<{ slug: string }>();
-  const vehicle = getVehicleBySlug(slug || "");
+  const vehicles = useVehicles();
+  const vehicle = vehicles.find((item) => item.slug === (slug || ""));
   const [activeImg, setActiveImg] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
 
@@ -28,7 +29,17 @@ export default function VehiclePage() {
 
   const orderedImages = vehicle.images;
 
-  const related = getRelatedVehicles(vehicle);
+  const related = vehicles
+    .filter((item) => item.id !== vehicle.id && item.status === "available")
+    .map((item) => ({
+      vehicle: item,
+      score: (item.brand === vehicle.brand ? 3 : 0) +
+        (item.bodyType === vehicle.bodyType ? 2 : 0) +
+        (item.fuel === vehicle.fuel ? 1 : 0),
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map(({ vehicle: item }) => item);
   const displayPrice = vehicle.promotionalPrice || vehicle.price;
 
   const waMessage = `Olá! Tenho interesse no ${vehicle.brand} ${vehicle.model} ${vehicle.version}, ano ${vehicle.year}, anunciado por ${formatPrice(displayPrice)}. Gostaria de mais informações.`;

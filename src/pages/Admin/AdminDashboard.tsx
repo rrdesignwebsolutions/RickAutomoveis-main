@@ -1,9 +1,9 @@
 import { Link } from "react-router";
 import { formatPrice } from "../../data/vehicles";
-import { getVehicles } from "../../data/vehicleStore";
+import { useVehicles } from "../../data/vehicleStore";
 
 export default function AdminDashboard() {
-  const vehicles = getVehicles();
+  const vehicles = useVehicles();
   const total = vehicles.length;
   const available = vehicles.filter((v) => v.status === "available").length;
   const reserved = vehicles.filter((v) => v.status === "reserved").length;

@@ -13,14 +13,20 @@ export default function AdminLogin() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 700));
-    if (email === "admin@rickautomoveis.com.br" && password === "rick2024") {
-      localStorage.setItem("rick_admin", "true");
+    try {
+      const response = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const result = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(result.error || "Não foi possível entrar no painel.");
       navigate("/admin/dashboard");
-    } else {
-      setError("E-mail ou senha incorretos.");
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : "Não foi possível entrar no painel.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

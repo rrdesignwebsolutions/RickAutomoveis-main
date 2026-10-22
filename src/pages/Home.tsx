@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router";
 import VehicleCard from "../components/VehicleCard";
-import { getFeaturedVehicles, getNewVehicles, getAvailableVehicles } from "../data/vehicleStore";
+import { useVehicles } from "../data/vehicleStore";
 import { whatsappLink } from "../data/contact";
 import rickFrente from "../imports/rick frente.png";
 
 export default function Home() {
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
-  const featured = getFeaturedVehicles();
-  const newVehicles = getNewVehicles();
-  const total = getAvailableVehicles().length;
+  const vehicles = useVehicles();
+  const available = vehicles.filter((vehicle) => vehicle.status === "available" || vehicle.status === "reserved");
+  const featured = vehicles.filter((vehicle) => vehicle.featured && vehicle.status === "available");
+  const newVehicles = vehicles.filter((vehicle) => vehicle.isNew && vehicle.status === "available");
+  const total = available.length;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
