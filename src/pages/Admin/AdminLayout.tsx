@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Outlet, Link, useNavigate, useLocation } from "react-router";
 import Logo from "../../components/Logo";
-import { syncSharedVehicles } from "../../data/vehicleStore";
+import { getVehicles, saveSharedVehicles, syncSharedVehicles } from "../../data/vehicleStore";
 
 export default function AdminLayout() {
   const navigate = useNavigate();
@@ -20,9 +20,7 @@ export default function AdminLayout() {
         }
 
         const hasSharedCatalog = await syncSharedVehicles();
-        if (!hasSharedCatalog) {
-          throw new Error("O catálogo não foi encontrado no D1 do Cloudflare. O estoque local não foi enviado para evitar substituir os dados da nuvem.");
-        }
+        if (!hasSharedCatalog) await saveSharedVehicles(getVehicles(), true);
       } catch (error) {
         console.error("Não foi possível validar a sessão ou sincronizar o estoque.", error);
         if (active) setSessionError(error instanceof Error ? error.message : "Não foi possível sincronizar o estoque compartilhado.");

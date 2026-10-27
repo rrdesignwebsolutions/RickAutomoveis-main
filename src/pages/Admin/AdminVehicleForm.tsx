@@ -18,13 +18,17 @@ const FUEL_OPTIONS = ["Flex", "Gasolina", "Diesel", "Híbrido", "Elétrico"];
 const TRANS_OPTIONS = ["Automático", "Manual", "CVT", "Automatizado"];
 const BODY_OPTIONS = ["Hatch", "Sedan", "SUV", "Pickup", "Coupe", "Minivan", "Moto"];
 const FEATURE_OPTIONS = [
-  "Ar-condicionado", "Ar-condicionado digital", "Ar-condicionado bi-zona",
-  "Bancos de couro", "Câmera de ré", "Câmera 360°",
-  "Sensor de estacionamento", "Multimídia", "Controle de estabilidade",
-  "Controle de tração", "Piloto automático", "Piloto automático adaptativo",
-  "Teto solar", "Teto panorâmico", "Chave presencial",
-  "Faróis LED", "Rodas de liga leve", "Carregador wireless",
-  "Direção elétrica", "Frenagem automática de emergência",
+  "Alarme",
+  "Ar-condicionado", "Ar-condicionado bi-zona", "Ar-condicionado digital",
+  "Bancos de couro", "Câmbio borboleta", "Câmera 360°", "Câmera de ré",
+  "Carregador wireless", "Chave presencial", "Chave reserva",
+  "Controle de estabilidade", "Controle de tração",
+  "Direção elétrica", "Direção hidráulica",
+  "Faróis LED", "Frenagem automática de emergência",
+  "Laudo cautelar aprovado", "Manual", "Multimídia",
+  "Piloto automático", "Piloto automático adaptativo", "Rodas de liga leve",
+  "Sensor de estacionamento", "Som", "Start Stop",
+  "Teto panorâmico", "Teto solar", "Travas elétricas", "Vidros elétricos",
 ];
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
